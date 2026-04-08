@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>週刊いいだ 週次チェックリスト</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:#f5f5f3;color:#1a1a18;padding:20px;font-size:14px}
+h1{font-size:18px;font-weight:500;margin-bottom:16px;color:#1a1a18}
+.dow-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.dow-btn{padding:6px 16px;border-radius:20px;border:1px solid #ccc;background:#fff;color:#666;font-size:13px;cursor:pointer;font-family:inherit}
+.dow-btn.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.dow-btn.today-hl{border-color:#185FA5;color:#185FA5;font-weight:500}
+.section{margin-bottom:20px}
+.section-title{font-size:11px;font-weight:500;letter-spacing:.06em;color:#888;text-transform:uppercase;margin-bottom:8px;padding-left:4px}
+.task-wrap{margin-bottom:6px}
+.task-card{background:#fff;border:1px solid #e8e8e4;border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px}
+.task-card.open-below{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom-color:transparent}
+.task-card.done{opacity:0.45}
+.task-card.done .task-text{text-decoration:line-through}
+.check{width:18px;height:18px;border-radius:4px;border:1.5px solid #ccc;flex-shrink:0;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:#fff}
+.check:hover{border-color:#185FA5}
+.check.checked{background:#185FA5;border-color:#185FA5}
+.check.checked::after{content:'';display:block;width:10px;height:7px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+.task-body{flex:1;min-width:0}
+.task-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.task-text{font-size:13px;color:#1a1a18;line-height:1.5}
+.task-text.clickable{color:#185FA5;cursor:pointer}
+.task-text.clickable:hover{text-decoration:underline}
+.task-sub{font-size:11px;color:#888;margin-top:2px}
+.task-comment{font-size:11px;color:#854F0B;background:#FAEEDA;border-radius:6px;padding:4px 8px;margin-top:4px;line-height:1.5}
+.tag{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;flex-shrink:0}
+.tag-koha{background:#EEEDFE;color:#3C3489}
+.tag-raisha{background:#E1F5EE;color:#085041}
+.tag-kosha{background:#FAEEDA;color:#633806}
+.tag-desk{background:#F1EFE8;color:#5F5E5A}
+.tag-multi{background:#E6F1FB;color:#0C447C}
+.accordion{border:1px solid #e8e8e4;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;background:#f9f9f7;padding:12px 14px;display:none}
+.accordion.open{display:block}
+.accordion h4{font-size:12px;font-weight:500;color:#555;margin-bottom:8px}
+.step-list{list-style:none;padding:0}
+.step-list li{font-size:12px;color:#1a1a18;padding:6px 0;border-bottom:1px solid #eee;display:flex;gap:8px;line-height:1.6}
+.step-list li:last-child{border-bottom:none}
+.step-num{font-size:11px;font-weight:500;color:#185FA5;flex-shrink:0;min-width:16px;padding-top:1px}
+.note{font-size:11px;color:#555;background:#fff;border:1px solid #e8e8e4;border-radius:8px;padding:6px 10px;margin-top:8px;line-height:1.6}
+.ext-link{color:#185FA5;font-size:11px;word-break:break-all;display:inline-block;margin-top:6px}
+.tmpl-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;background:#E6F1FB;color:#0C447C;font-size:11px;margin-top:6px;text-decoration:none;cursor:pointer}
+.tmpl-badge:hover{background:#B5D4F4}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:#666}
+.ldot{width:10px;height:10px;border-radius:3px}
+</style>
+</head>
+<body>
+<h1>週刊いいだ 週次チェックリスト</h1>
+<div class="legend">
+  <span class="legend-item"><span class="ldot" style="background:#7F77DD"></span>今週号</span>
+  <span class="legend-item"><span class="ldot" style="background:#1D9E75"></span>来週号</span>
+  <span class="legend-item"><span class="ldot" style="background:#BA7517"></span>再来週〜先の号</span>
+  <span class="legend-item"><span class="ldot" style="background:#888780"></span>デスク業務</span>
+  <span class="legend-item"><span class="ldot" style="background:#B5D4F4"></span>複数区分</span>
+  <span class="legend-item" style="color:#185FA5;font-weight:500;margin-left:4px">▶ = 手順あり</span>
+</div>
+<div class="dow-tabs" id="tabs"></div>
+<div id="content"></div>
+
+<script>
+const DAYS=['月曜日','火曜日','水曜日','木曜日','金曜日'];
+const jsDay=new Date().getDay();
+const todayIdx=jsDay===0||jsDay===6?0:jsDay-1;
+
+const M={
+  hasso:{title:'掲載紙の発送先と部数確認',steps:['全ページ担当ライター・編集へ掲載紙の発送先を確認する','宛名（会社名・役職・正式名称）・郵便番号・住所・希望部数を収集する（10部超の場合は電話番号も）','「.csv」形式で書き出して原さんへ渡す（原さんが発送してくださいます）'],tmpl:'週刊いいだ_掲載紙発送先リスト_記事.csv'},
+  laminate:{title:'フロントのラミネート作成',steps:['Dropbox（ブラウザ版）から該当号をダウンロードして、フロントのみA4で印刷する','ラミネートして原さんへ（掲載紙と一緒に郵送の準備をしてくださいます）'],link:{label:'Dropboxを開く',url:'https://www.dropbox.com/scl/fo/hbxovhhx8xxi0bk7a2p2l/h?rlkey=ym6cq4bgwwhlndif95pzpamgk&e=1&dl=0'}},
+  seisaku:{title:'制作費の集計',steps:['今週発行（校了済）の記事部分の制作費を集計する。ページごと（レギュラー面など2ページあるものは各ページ別）の撮影料・原稿料・デザイン料を確認する。追加制作費（3校以上の修正につき1校あたり1,000円）も確認する。デザイナー側で少なく見積もっている場合があるので編集判断でカウントする','「cosennas共有」→「週刊いいだ制作費」フォルダ内、該当年月のフォルダに先週のExcelデータをコピーして作る。記事部分の数字を全て更新する','更新が終わったら大平さんへ「記事の制作費の集計終わりました」と声をかける']},
+  kairan:{title:'フロント・特集　社内回覧',steps:['フロント・2・3面を印刷する','回覧表を添付して回覧を回す']},
+  yomiai:{title:'インフォメーション　読み合わせ',steps:['インフォメーションをA3で印刷する。修正を書き込むため赤ペン用意（読み手）','インフォで掲載する情報のチラシ・メール・FAX等を掲載順に並べておく（確認側）','読み手が1つずつ読み上げていく。日付・漢字・ひらがな・カタカナ・アルファベット・数字など正確に読み上げる','確認側が聞きながら元のチラシ等と照らし合わせて間違いがないか確認する。特に日付と曜日・電話番号・料金・名前の漢字に注意','確認側が間違いに気づいたら読み手に修正の書き込みを依頼する。インフォ・当番医まで確認する'],note:'※読み手と確認者の2人が必要'},
+  info:{title:'インフォメーション　原稿作成',steps:['編集室に届いている全ての情報をプリントアウトしておく','Googleドキュメントで前号をコピーする','1件ずつ入力する。●イベント名（改行）日時（曜日）、場所。開催内容を簡潔に。定員・入場料・申し込みの要否・特記事項。☎0265・〇〇・〇〇〇〇'],note:'Googleアカウント：c.mitsui000@gmail.com\n内容の入力に迷ったらChatGPT「インフォメーション文作成用チャット」を使用\n詳細な入力ルールは添付資料参照'},
+  minna:{title:'みんなのページ　原稿作成',steps:['読者から届くメール・ハガキで「ちょっと見てよ」「ちょっと聞いてよ」の投稿があればコピーする。掲載済のメールにはフラグを立てておく','文字量・文面を整える']},
+  present:{title:'プレゼント応募集計・抽選→発送',steps:['Cosennas共有内「WI_DATE」→「当選者プレゼント発送」Excelデータを開く','応募者数をカウント。ハガキが多ければハガキ応募の当選人数多め、メールが多ければメール応募を多めに選ぶ','選んだ人が過去に同じプレゼントに当たっていないか、直近1〜2年以内に当たっていないか確認して、該当しなければ当選とする','当選者名・住所をExcelに記録する','当選者情報の連絡先：スズキヤさん→湯澤さんへ直接チャット、黄鶴園→自分でハガキに住所・宛名・掲載号を記入してポスト投函、その他→原さんへ依頼']},
+  eiga:{title:'レギュラー面　映画情報着→りえさんへ',steps:['トキワ劇場（堀様）・センゲキシネマズ（松岡様）からメールで届く','プリントアウトして、先週の映画情報（Word）をコピーする','今週分を入力して、Teamsでりえさんへ依頼する']},
+  bougera:{title:'フロント・特集　原稿校正→本社校正（棒ゲラ）',steps:['ライターから原稿が納品されたらダウンロードする','一旦ClaudeなどのAIで校正する。目視で確認して修正する点は赤字で直す','赤字を全て黒字に戻して別名で保存。黒字の状態で本社校正にメール送信（iida-w@cosen.co.jp）','本社からメールが戻ったら赤字の修正箇所を修正する','最初の赤字の修正と合わせて、原稿ファイル名を「〇〇_本社」と変えておく','校正済原稿をTeamsにアップしてデザイナーさんに渡す']},
+  insta:{title:'インスタ更新',steps:['表紙の画像を使ってもよければそれを投稿の1枚目に。週刊いいだの表紙をスマホで撮影してPCへ','表紙の画像をChatGPTに入れて投稿文章を作成する','ハッシュタグもつけて投稿する']},
+  shoko:{title:'デザイナーへ初校依頼→先方・本社校正',steps:['本社校正済の原稿をデザイナーへ渡す。写真がそろっているか・デザインの指示（ラフなど）があるか確認して一緒に伝える','デザイナーから初校が何日ごろになるか確認する','デザイナーから初校が届いたら、本社最終確認（iida-w@cosen.co.jp）と先方校正（ライターがいればライターへ依頼）へ送る']},
+  freelance:{title:'フリーランス法対応メール送付',steps:['フロント・2・3面特集のみ。個人のメールから、発行日・特集内容・金額を明記した依頼メールを各担当ライター・デザイナーにメールで送る','送る際に宛先に管理メール（wi.freelanceorders@gmail.com）のアドレスも必ず入れる（CCではなく宛先）'],note:'件名の日付・宛先「〇〇様」部分・金額・特集内容を自動記録しているため、必ずメールフォーマットに沿って送ること'},
+  highschool:{title:'ハイスクール　各高校へ生徒推薦依頼',steps:['cosennas内の個人フォルダ「cmitsui」→「原稿関係」→「熱中夢中ハイスクール」の各高校リストから翌月の担当校を確認する','該当校の教頭先生宛に取材依頼の電話をする','すぐに決まらない場合が多いので、1週間ほど置いて再度電話する','取材対象者（グループでも個人でも／ただしグループの場合は代表者1名推薦してもらう）・取材窓口（日程調整等の窓口になってもらう先生）・取材内容を聞き取る','教頭先生へ、今井さん（ライター）から連絡が行くこと、スズキヤさんのHPで記事を公開するのでWeb掲載する旨伝えてもらう','今井さんへ、全ての情報と学校の電話番号を伝える']},
+  tozan:{title:'取材先のリストアップ・社内確認',steps:['過去1〜2年の掲載履歴をDropboxで確認する（重複を避ける）','特集テーマに沿った候補をリストアップする（雛形Excelを使用）','TeamsでライターさんやデザイナーさんにリストをShare、社内確認が必要な場合はTeamsの該当チャネルに投稿する','優先順位を決めて取材依頼の順番を確定する'],tmplFile:'取材先リスト雛形.xlsx'},
+};
+
+const tasks={
+  0:[
+    {group:'今週号',tag:'tag-koha',items:[
+      {text:'掲載紙の発送先と部数確認→原さんへ報告',manual:'hasso'},
+      {text:'フロントのラミネートを1部作成→原さんへ',manual:'laminate'},
+      {text:'制作費の集計→大平さんへ報告',manual:'seisaku'},
+      {text:'フロント・特集　社内回覧',manual:'kairan'},
+      {text:'ホワイトボードの面付表を1週分ずらす',sub:'Dropboxのマスター面付表も更新'},
+      {text:'Dropbox・WI_scanのデータ削除・破棄',sub:'校正紙も2〜3週に1回シュレッダー'},
+    ]},
+    {group:'来週号',tag:'tag-raisha',items:[
+      {text:'全ページ　校正・確認',sub:'★最重要'},
+      {text:'2週分の広告面付　社内回覧',sub:''},
+    ]},
+    {group:'再来週〜先の号',tag:'tag-kosha',items:[
+      {text:'ライターさんへ取材日程・原稿入稿日の確認',sub:'3週後の号'},
+      {text:'取材先をライターへ渡し取材開始の依頼',sub:'1ヶ月後の号'},
+      {text:'フロント撮影日程調整',sub:'1ヶ月後の号'},
+      {text:'フロント・レギュラー面囲み記事　原稿執筆',sub:'3週後の号'},
+      {text:'ライター・デザイナーと内容の打ち合わせ',sub:'1ヶ月半後の号'},
+      {text:'取材先候補へ取材依頼',sub:'1ヶ月半後の号'},
+      {text:'担当ライター・デザイナー決定・依頼(tel)',sub:'2ヶ月後の号'},
+      {text:'内容決定・過去の広告案件の確認',sub:'3ヶ月後の号'},
+    ]},
+    {group:'デスク業務',tag:'tag-desk',items:[
+      {text:'申し込みがあれば対応',sub:''},
+    ]},
+  ],
+  1:[
+    {group:'今週号',tag:'tag-koha',items:[
+      {text:'掲載紙お届け',sub:'郵送していないところへ直接届ける'},
+      {text:'プレゼント応募集計・抽選→発送準備→発送',manual:'present'},
+      {text:'レギュラー面　映画情報着→りえさんへ',manual:'eiga'},
+    ]},
+    {group:'来週号',tag:'tag-raisha',items:[
+      {text:'インフォメーション　読み合わせ',manual:'yomiai'},
+    ]},
+    {group:'再来週〜先の号',tag:'tag-kosha',items:[
+      {text:'インフォメーション　原稿作成',manual:'info'},
+      {text:'みんなのページ　原稿作成',manual:'minna'},
+    ]},
+  ],
+  2:[
+    {group:'来週号 / デスク業務',tag:'tag-multi',items:[
+      {text:'広告の空きスペースを埋める',sub:''},
+    ]},
+    {group:'来週号',tag:'tag-raisha',items:[
+      {text:'全ページ　戸田さん最終確認',sub:'★最重要'},
+    ]},
+    {group:'再来週〜先の号',tag:'tag-kosha',items:[
+      {text:'フロント・特集　原稿入稿締め切り',comment:'※午後になっても来ていない場合は今日中にいただけそうかライターへ確認する'},
+      {text:'フロント・特集　原稿を校正→本社校正（棒ゲラ）',manual:'bougera'},
+      {text:'囲み記事　原稿締め切り→りえさんへ',comment:'※あれば。特集と同じような進行'},
+      {text:'みんなのページ・各連載　原稿入稿',sub:''},
+    ]},
+  ],
+  3:[
+    {group:'今週号',tag:'tag-koha',items:[
+      {text:'インスタ更新',manual:'insta'},
+    ]},
+    {group:'来週号',tag:'tag-raisha',items:[
+      {text:'フロント・特集　デザイナーへ初校依頼→先方・本社校正',manual:'shoko'},
+      {text:'囲み記事　初校→本社校正→修正→先方校正',sub:''},
+      {text:'みんなのページ・各連載　初校→本社・先方校正',sub:''},
+      {text:'みんなのページ　パズル中山さんから着→りえさんへ',sub:''},
+    ]},
+    {group:'再来週〜先の号',tag:'tag-kosha',items:[
+      {text:'担当ライター・デザイナーへフリーランス法対応メール送付',manual:'freelance'},
+    ]},
+  ],
+  4:[
+    {group:'今週号',tag:'tag-koha',items:[
+      {text:'掲載紙の発送先と部数確認→原さんへ報告',sub:'月曜と同様',manual:'hasso'},
+    ]},
+    {group:'来週号 / デスク業務',tag:'tag-multi',items:[
+      {text:'最終の面付けを大平さん・畠中さん・原さんへ報告',sub:''},
+      {text:'記事の担当デザイナーを大平さんへ報告',sub:''},
+    ]},
+    {group:'来週号',tag:'tag-raisha',items:[
+      {text:'フロント・特集　初校→先方・本社校正',manual:'shoko'},
+      {text:'各連載・インフォメーション　校正・確認',sub:''},
+      {text:'おうちごはん・黄鶴園（第4週）　原稿着→初校→本社・先方校正',sub:''},
+    ]},
+    {group:'再来週〜先の号',tag:'tag-kosha',items:[
+      {text:'レギュラー面　日刊スポから占い着→りえさんへ',sub:''},
+      {text:'ハイスクール　各高校へ生徒推薦依頼→生徒決定',sub:'1ヶ月半後の号',manual:'highschool'},
+      {text:'取材先のリストアップ・社内確認',sub:'2ヶ月後の号',manual:'tozan'},
+      {text:'担当ライターの振り分けとTeamsで先々の予定お知らせ',sub:'3ヶ月後の号'},
+    ]},
+  ],
+};
+
+let checked={};
+let openM={};
+let cur=todayIdx;
+
+function render(){
+  document.getElementById('tabs').innerHTML=DAYS.map((d,i)=>
+    '<button class="dow-btn'+(i===cur?' active':'')+(i===todayIdx&&i!==cur?' today-hl':'')+'" onclick="setDay('+i+')">'+d+(i===todayIdx?' （今日）':'')+'</button>'
+  ).join('');
+
+  document.getElementById('content').innerHTML=(tasks[cur]||[]).map(section=>
+    '<div class="section">'+
+    '<div class="section-title">'+section.group+'</div>'+
+    section.items.map((t,ti)=>{
+      const key=cur+'-'+section.group+'-'+ti;
+      const done=!!checked[key];
+      const m=t.manual?M[t.manual]:null;
+      const isOpen=!!openM[key];
+      return '<div class="task-wrap">'+
+        '<div class="task-card'+(done?' done':'')+(m&&isOpen?' open-below':'')+'">' +
+          '<div class="check'+(done?' checked':'')+'" onclick="toggle(\''+key+'\')"></div>'+
+          '<div class="task-body">'+
+            '<div class="task-row">'+
+              '<span class="tag '+section.tag+'">'+section.group.split('/')[0].trim()+'</span>'+
+              '<span class="task-text'+(m?' clickable':'')+'"'+(m?' onclick="toggleM(\''+key+'\')"':'')+'>'+t.text+(m?' <span style="font-size:11px;color:#185FA5">'+(isOpen?'▼':'▶')+'</span>':'')+'</span>'+
+            '</div>'+
+            (t.sub?'<div class="task-sub">'+t.sub+'</div>':'')+
+            (t.comment?'<div class="task-comment">'+t.comment+'</div>':'')+
+          '</div>'+
+        '</div>'+
+        (m?'<div class="accordion'+(isOpen?' open':'')+'">'+
+          '<h4>'+m.title+'</h4>'+
+          '<ol class="step-list">'+m.steps.map((s,si)=>'<li><span class="step-num">'+(si+1)+'</span><span>'+s+'</span></li>').join('')+'</ol>'+
+          (m.note?'<div class="note">'+m.note.replace(/\n/g,'<br>')+'</div>':'')+
+          (m.link?'<div style="margin-top:8px"><a class="ext-link" href="'+m.link.url+'" target="_blank">&#8599; '+m.link.label+'</a></div>':'')+
+          (m.tmpl?'<div class="tmpl-badge">&#8595; 雛形：'+m.tmpl+'</div>':'')+
+          (m.tmplFile?'<a class="tmpl-badge" href="取材先リスト雛形.xlsx" download>&#8595; 取材先リスト雛形.xlsx</a>':'')+
+        '</div>':'')+
+      '</div>';
+    }).join('')+
+    '</div>'
+  ).join('');
+}
+
+function setDay(i){cur=i;openM={};render();}
+function toggle(key){checked[key]=!checked[key];render();}
+function toggleM(key){openM[key]=!openM[key];render();}
+
+render();
+</script>
+</body>
+</html>
